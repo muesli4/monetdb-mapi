@@ -80,10 +80,10 @@ throwOnMapiHdlError :: B.Mapi -> B.MapiHdl -> IO ()
 throwOnMapiHdlError mapi hdl = do
     e <- B.mapi_error mapi
     when (e == B.cMSERVER) $
-        getServerErrror hdl >>= E.throwIO . MapiError . Server
+        getServerErrorMsg hdl >>= E.throwIO . MapiError . Server
 
-getServerErrror :: B.MapiHdl -> IO String
-getServerErrror hdl = do
+getServerErrorMsg :: B.MapiHdl -> IO String
+getServerErrorMsg hdl = do
     cstr <- B.mapi_result_error hdl
     peekCString cstr
 
@@ -108,9 +108,9 @@ connect (ConInfo mHost mPort mUser mPass lang dbName) = do
     let port = maybe 0 fromIntegral mPort
     user <- optCString mUser
     pass <- optCString mPass
-    l <- newCString (fromLang lang)
+    langStr <- newCString (fromLang lang)
     db <- newCString dbName
-    mapi <- B.mapi_connect host port user pass l db
+    mapi <- B.mapi_connect host port user pass langStr db
     throwOnMapiError mapi
     pure $ Connection mapi
 
@@ -128,8 +128,8 @@ defConInfo = ConInfo Nothing Nothing (Just "monetdb") (Just "monetdb")
 -- | Opens a connection, runs the action and closes the connection, even when
 -- an exception has been thrown.
 --
--- >>> withConnection (defConInfo Mal "test") $ \c -> quickQuery c "io.print(42);"
--- [["42]]
+-- >>> withConnection (defConInfo Mal "test") $ \c -> quickQuery c "io.print(42, 23);"
+-- [["42", "23"]]
 --
 withConnection :: ConInfo -> (Connection -> IO a) -> IO a
 withConnection ci f = E.bracket (connect ci) disconnect f
