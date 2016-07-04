@@ -92,18 +92,19 @@ throwOnError mapi hdl = do
     throwOnMapiError mapi
     throwOnMapiHdlError mapi hdl
 
+type Database = String
+
 data ConInfo = ConInfo
              { ciOptHost  :: Maybe String
              , ciOptPort  :: Maybe Int
              , ciUsername :: Maybe String
              , ciPassword :: Maybe String
-             , ciLang     :: Lang
-             , ciDbName   :: String
+             , ciDbName   :: Database
              }
 
 -- | It is strongly advised to use 'withConnection', which is exception-safe.
-connect :: ConInfo -> IO Connection
-connect (ConInfo mHost mPort mUser mPass lang dbName) = do
+connect :: ConInfo -> Lang -> IO Connection
+connect (ConInfo mHost mPort mUser mPass dbName) lang = do
     host <- optCString mHost
     let port = maybe 0 fromIntegral mPort
     user <- optCString mUser
@@ -118,21 +119,21 @@ disconnect :: Connection -> IO ()
 disconnect (Connection mapi) = B.mapi_disconnect mapi
 
 -- | A 'ConInfo' with all optional fields omitted.
-emptyConInfo :: Lang -> String -> ConInfo
+emptyConInfo :: Database -> ConInfo
 emptyConInfo = ConInfo Nothing Nothing Nothing Nothing
 
 -- | A 'ConInfo' with common default settings, mostly for testing purposes.
-defConInfo :: Lang -> String -> ConInfo
+defConInfo :: Database -> ConInfo
 defConInfo = ConInfo Nothing Nothing (Just "monetdb") (Just "monetdb")
 
 -- | Opens a connection, runs the action and closes the connection, even when
 -- an exception has been thrown.
 --
--- >>> withConnection (defConInfo Mal "test") $ \c -> quickQuery c "io.print(42, 23);"
+-- >>> withConnection (defConInfo "test") Mal $ \c -> quickQuery c "io.print(42, 23);"
 -- [["42", "23"]]
 --
-withConnection :: ConInfo -> (Connection -> IO a) -> IO a
-withConnection ci f = E.bracket (connect ci) disconnect f
+withConnection :: ConInfo -> Lang -> (Connection -> IO a) -> IO a
+withConnection ci l f = E.bracket (connect ci l) disconnect f
 
 
 -- TODO rework Result and Query, that mechanism is terrible
