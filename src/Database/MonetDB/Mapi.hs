@@ -19,6 +19,7 @@ module Database.MonetDB.Mapi
 
     -- * Queries
     , quickQuery
+    , quickQuery_
     ) where
 
 import           Control.Monad
