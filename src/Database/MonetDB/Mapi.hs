@@ -32,26 +32,29 @@ import           Foreign.Ptr
 import qualified Bindings.MonetDB.Mapi as B
 import qualified Control.Exception     as E
 
+-- | Error types that may occur within MonetDB.
+data ErrorType
+    = Default String
+    | Timeout
+    | Server String
+    deriving Show
+
 -- | Some IO actions might throw 'MapiError'.
-data MapiError = MapiError
-               { errorType    :: ErrorType
-               }
-               deriving Show
+newtype MapiError
+    = MapiError
+    { errorType :: ErrorType
+    } deriving Show
 
 instance E.Exception MapiError where
     toException                       = E.SomeException
     fromException (E.SomeException e) = cast e
 
-data ErrorType = Default String
-               | Timeout
-               | Server String
-               deriving Show
-
 -- | The language to be used for a connection.
-data Lang = Sql
-          | Mil
-          | Mal
-          | XQuery
+data Lang
+    = Sql
+    | Mil
+    | Mal
+    | XQuery
 
 fromLang :: Lang -> String
 fromLang l = case l of
@@ -72,7 +75,6 @@ throwOnMapiError mapi = do
     if e == B.cMERROR
     then do
         cstr <- B.mapi_error_str mapi
-        print cstr
         s <- peekCString cstr
         E.throwIO $ MapiError $ Default s
     else when (e == B.cMTIMEOUT) $ E.throwIO $ MapiError Timeout
@@ -134,10 +136,14 @@ defConInfo = ConInfo Nothing Nothing (Just "monetdb") (Just "monetdb")
 -- [["42", "23"]]
 --
 withConnection :: ConInfo -> Lang -> (Connection -> IO a) -> IO a
-withConnection ci l f = E.bracket (connect ci l) disconnect f
+withConnection ci l = E.bracket (connect ci l) disconnect
 
 
--- TODO rework Result and Query, that mechanism is terrible
+-- TODO rework Result and Query, that mechanism is terrible:
+-- The issue here is that some components may be used multiple times, but that
+-- is a type of error. A representation is required that does not allow using
+-- resources several times in IO actions (e.g. inversion of control with a
+-- function).
 
 type QueryForeignPtr = ForeignPtr ()
 
