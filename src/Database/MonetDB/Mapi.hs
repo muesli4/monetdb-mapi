@@ -6,13 +6,14 @@ module Database.MonetDB.Mapi
     , ErrorType(..)
 
     -- * Connection parameters
+    , Database
     , Lang(..)
     , ConInfo(..)
     , emptyConInfo
     , defConInfo
 
     -- * Connection handling
-    , Connection(..)
+    , Connection
     , connect
     , disconnect
     , withConnection
@@ -201,5 +202,6 @@ quickQuery c s = do
     r <- execute q
     fetchRows r
 
+-- | Run a query and ignore the result.
 quickQuery_ :: Connection -> String -> IO ()
 quickQuery_ c s = query c s >>= void . execute
